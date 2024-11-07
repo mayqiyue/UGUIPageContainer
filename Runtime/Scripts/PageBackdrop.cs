@@ -19,17 +19,17 @@ namespace UGUIPageNavigator.Runtime
         [SerializeField]
         private bool m_closeWhenClicked;
 
-        private CanvasGroup _canvasGroup;
-        private RectTransform _parentTransform;
-        private RectTransform _rectTransform;
+        private CanvasGroup m_CanvasGroup;
+        private RectTransform m_ParentTransform;
+        private RectTransform m_RectTransform;
 
         private void Awake()
         {
-            _rectTransform = (RectTransform)transform;
-            _canvasGroup = gameObject.GetComponent<CanvasGroup>();
-            if (_canvasGroup == null)
+            m_RectTransform = (RectTransform)transform;
+            m_CanvasGroup = gameObject.GetComponent<CanvasGroup>();
+            if (m_CanvasGroup == null)
             {
-                _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+                m_CanvasGroup = gameObject.AddComponent<CanvasGroup>();
             }
 
             if (m_closeWhenClicked)
@@ -56,9 +56,9 @@ namespace UGUIPageNavigator.Runtime
 
         public void Setup(RectTransform parentTransform)
         {
-            _parentTransform = parentTransform;
-            _rectTransform.FillParent(_parentTransform);
-            _canvasGroup.interactable = m_closeWhenClicked;
+            m_ParentTransform = parentTransform;
+            m_RectTransform.FillParent(m_ParentTransform);
+            m_CanvasGroup.interactable = m_closeWhenClicked;
             gameObject.SetActive(false);
         }
 
@@ -68,11 +68,11 @@ namespace UGUIPageNavigator.Runtime
 
             if (animated)
             {
-                StartCoroutine(FadeCanvasGroup(_canvasGroup, 0, 1, 0.3f));
+                StartCoroutine(FadeCanvasGroup(m_CanvasGroup, 0, 1, 0.3f));
             }
             else
             {
-                _canvasGroup.alpha = 1;
+                m_CanvasGroup.alpha = 1;
             }
         }
 
@@ -80,15 +80,15 @@ namespace UGUIPageNavigator.Runtime
         {
             if (animated)
             {
-                StartCoroutine(FadeCanvasGroup(_canvasGroup, 1, 0, 0.3f, () => { gameObject.SetActive(false); }));
+                StartCoroutine(FadeCanvasGroup(m_CanvasGroup, 1, 0, 0.3f, () => { gameObject.SetActive(false); }));
             }
             else
             {
-                _canvasGroup.alpha = 0;
+                m_CanvasGroup.alpha = 0;
                 gameObject.SetActive(false);
             }
         }
-        
+
         private IEnumerator FadeCanvasGroup(CanvasGroup cg, float start, float end, float duration, Action onComplete = null)
         {
             var elapsed = 0f;
@@ -97,7 +97,7 @@ namespace UGUIPageNavigator.Runtime
 
             while (elapsed < duration)
             {
-                elapsed += Time.deltaTime;
+                elapsed += Time.unscaledDeltaTime;
                 cg.alpha = Mathf.Lerp(start, end, elapsed / duration);
                 yield return null;
             }

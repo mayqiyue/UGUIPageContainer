@@ -10,6 +10,8 @@ namespace UGUIPageNavigator.Runtime
 {
     public interface IPageLifecycleEvent
     {
+        void PageDidLoad();
+
         /// <summary>
         /// You can do some initialization operations here
         /// </summary>
@@ -24,11 +26,11 @@ namespace UGUIPageNavigator.Runtime
         /// <summary>
         /// You can do some exit animations here
         /// </summary>
-        void PageWillDisAppear();
+        void PageWillDisappear();
 
         /// <summary>
         /// You can do some resource destruction operations
         /// </summary>
-        void PageDidDisAppear();
+        void PageDidDisappear();
     }
 }

@@ -15,7 +15,7 @@ namespace UGUIPageNavigator.Runtime
 {
     public class PageContainer : MonoBehaviour
     {
-        private static readonly List<PageContainer> Instances = new List<PageContainer>();
+        public static List<PageContainer> Instances { get; internal set; } = new List<PageContainer>();
 
         [SerializeField]
         private string m_uniqueName = "Default";
@@ -25,6 +25,12 @@ namespace UGUIPageNavigator.Runtime
 
         [SerializeField]
         private List<PageContainerEventListener> m_eventListeners = new List<PageContainerEventListener>();
+
+        [SerializeField] [Tooltip("If the page does not come with its own canvas, this canvas will be used.")]
+        private GameObject m_UnderlyingCanvas;
+
+        [SerializeField] [Tooltip("If your canvas mode is ScreenSpace - Camera, you can set the camera here.")]
+        private Camera m_CanvasCamera;
 
         [SerializeField]
         private bool m_AutoSoringOrder = true;
@@ -38,6 +44,8 @@ namespace UGUIPageNavigator.Runtime
         private readonly List<Page> m_Pages = new List<Page>();
 
         private readonly List<Page> m_DontDestroyPages = new List<Page>();
+
+        public List<Page> Pages => m_Pages;
 
         private void Awake()
         {
@@ -54,6 +62,11 @@ namespace UGUIPageNavigator.Runtime
             Instances.Add(this);
         }
 
+        private void OnDestroy()
+        {
+            Instances.Remove(this);
+        }
+
         public static PageContainer Get(string name)
         {
             return Instances.Find(container => container.m_uniqueName == name);
@@ -64,52 +77,57 @@ namespace UGUIPageNavigator.Runtime
             return transform.GetComponentInParent<PageContainer>();
         }
 
-        public async UniTask Push(string path, bool animated = true, Action<Page> onload = null)
+        public Page TopPage => m_Pages.Count > 0 ? m_Pages[^1] : null;
+
+        #region Push
+
+        public async UniTask Push(string path, bool animated = true, Action<Page> onLoad = null)
         {
-            await Push<Page>(path, animated, onload);
+            await Push<Page>(path, animated, onLoad);
         }
 
-        public async UniTask Push<T>(string path, bool animated = true, Action<T> onload = null) where T : Page
+        public async UniTask Push<T>(string path, bool animated = true, Action<T> onLoad = null) where T : Page
         {
             T page = null;
-            GameObject pageObj = null;
-
             var cachePage = m_DontDestroyPages.Find(p => p.Path == path) as T;
             if (cachePage != null)
             {
                 page = cachePage;
-                pageObj = page.gameObject;
                 page.ExitCache();
                 m_DontDestroyPages.Remove(cachePage);
             }
             else
             {
                 var prefab = Resources.Load<GameObject>(path);
-                pageObj = Instantiate(prefab, transform);
+                var pageObj = Instantiate(prefab, transform);
                 page = pageObj.GetComponent<T>();
+                if (page == null)
+                {
+                    throw new Exception($"Page {path} must have a component of type {typeof(T).Name}");
+                }
+
+                pageObj.name = pageObj.name.Replace("(Clone)", "");
             }
 
-            if (page == null)
+            int? sortingOrder = null;
+            if (m_AutoSoringOrder)
             {
-                throw new Exception($"Page {path} must have a component of type {typeof(T).Name}");
+                sortingOrder = m_Pages.Count > 0 ? (TopPage.SortingOrder + m_SortingOrderStep) : m_BaseSortingOrder;
             }
 
-            var root = pageObj.transform.Find("Root");
-            if (root == null)
-            {
-                throw new Exception($"Page {path} must have a child named Root");
-            }
+            page.Config(path, sortingOrder);
+            page.Load(m_UnderlyingCanvas, m_CanvasCamera);
+            onLoad?.Invoke(page);
 
-            (root as RectTransform).FillParent(pageObj.transform as RectTransform);
+            m_Pages.Add(page);
 
-            pageObj.name = pageObj.name.Replace("(Clone)", "");
-
+            // setup backdrop
             PageBackdrop backdrop = null;
-            if (page.EnableBackdrop)
+            if (page.EnableBackdrop && page.PageObject.transform.Find("Backdrop") == null)
             {
                 var backdropObj = page.OverrideBackdrop != null
-                    ? Instantiate(page.OverrideBackdrop.gameObject, pageObj.transform)
-                    : Instantiate(Resources.Load<GameObject>("PageBackdrop"), pageObj.transform);
+                    ? Instantiate(page.OverrideBackdrop.gameObject, page.PageObject.transform)
+                    : Instantiate(Resources.Load<GameObject>("PageBackdrop"), page.PageObject.transform);
                 backdropObj.name = "Backdrop";
                 backdropObj.transform.SetSiblingIndex(0);
                 backdrop = backdropObj.GetComponent<PageBackdrop>();
@@ -118,19 +136,10 @@ namespace UGUIPageNavigator.Runtime
                     backdrop = backdropObj.AddComponent<PageBackdrop>();
                 }
 
-                backdrop.Setup(pageObj.transform as RectTransform);
+                backdrop.Setup(page.PageObject.transform as RectTransform);
             }
 
-            page.Path = path;
-            if (m_AutoSoringOrder)
-            {
-                var max = m_Pages.Count > 0 ? m_Pages[^1].SortingOrder : m_BaseSortingOrder;
-                page.SortingOrder = max + m_SortingOrderStep;
-            }
-
-            m_Pages.Add(page);
-            onload?.Invoke(page);
-
+            // start animation
             page.PageWillAppear();
 
             foreach (var t in m_eventListeners)
@@ -150,6 +159,15 @@ namespace UGUIPageNavigator.Runtime
             {
                 t.Did(PageOperation.Push, m_Pages.Count >= 2 ? m_Pages[^2] : null, page);
             }
+        }
+
+        #endregion
+
+        #region Pop
+
+        public async UniTask PopToRoot(bool animated = true)
+        {
+            await Pop(m_Pages.Count, animated);
         }
 
         public async UniTask Pop(int count = 1, bool animated = true)
@@ -188,7 +206,7 @@ namespace UGUIPageNavigator.Runtime
                 t.Will(PageOperation.Pop, page, to);
             }
 
-            page.PageWillDisAppear();
+            page.PageWillDisappear();
 
             if (page.EnableBackdrop)
             {
@@ -204,7 +222,7 @@ namespace UGUIPageNavigator.Runtime
                 await HandlePageTransition(page, PageOperation.Pop);
             }
 
-            page.PageDidDisAppear();
+            page.PageDidDisappear();
 
             foreach (var t in m_eventListeners)
             {
@@ -217,9 +235,13 @@ namespace UGUIPageNavigator.Runtime
             }
             else
             {
-                Destroy(page.gameObject);
+                Destroy(page.PageObject);
             }
         }
+
+        #endregion
+
+        #region Transition
 
         private async UniTask HandlePageTransition(Page page, PageOperation operation)
         {
@@ -248,8 +270,9 @@ namespace UGUIPageNavigator.Runtime
 
             clip = FixClip(clip, page.transform as RectTransform);
 
-            var animator = page.gameObject.GetComponent<Animator>();
-            if (animator == null) animator = page.gameObject.AddComponent<Animator>();
+            var animator = page.PageObject.GetComponent<Animator>();
+            if (animator == null) animator = page.PageObject.AddComponent<Animator>();
+            animator.updateMode = AnimatorUpdateMode.UnscaledTime;
 
             var runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("Page");
 
@@ -266,7 +289,7 @@ namespace UGUIPageNavigator.Runtime
 
             animator.runtimeAnimatorController = overrideController;
             animator.Play(name);
-            await UniTask.Delay(TimeSpan.FromSeconds(clip.length), cancellationToken: this.destroyCancellationToken);
+            await UniTask.Delay(TimeSpan.FromSeconds(clip.length), delayType: DelayType.UnscaledDeltaTime, cancellationToken: this.destroyCancellationToken);
         }
 
         private AnimationClip FixClip(AnimationClip clip, RectTransform rectTransform)
@@ -274,5 +297,7 @@ namespace UGUIPageNavigator.Runtime
             // TODO: Implement this method
             return clip;
         }
+
+        #endregion
     }
 }

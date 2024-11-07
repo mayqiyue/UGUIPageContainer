@@ -6,19 +6,24 @@
  *
  */
 
+using System;
+using JetBrains.Annotations;
 using UnityEngine;
 
 namespace UGUIPageNavigator.Runtime
 {
+    /// <summary>
+    /// 一个page的正确结构是这样的：Canvas -> Root -> Content -> 其他UI元素   翻译成英文
+    /// </summary>
     [DisallowMultipleComponent]
     public class Page : MonoBehaviour, IPageLifecycleEvent
     {
-        [SerializeField]
-        private PageTransitionContainer m_TransitionContainer;
-
         private string m_Path;
 
         private int m_SortingOrder;
+
+        [SerializeField]
+        private PageTransitionContainer m_TransitionContainer;
 
         [SerializeField]
         private bool m_EnableBackdrop;
@@ -29,21 +34,9 @@ namespace UGUIPageNavigator.Runtime
         [SerializeField]
         private bool m_DontDestroyAfterPop;
 
-        public string Path
-        {
-            get => m_Path;
-            internal set => m_Path = value;
-        }
+        private GameObject m_PageObject;
 
-        public int SortingOrder
-        {
-            get => m_SortingOrder;
-            internal set
-            {
-                m_SortingOrder = value;
-                UpdateSortingOrder();
-            }
-        }
+        private RectTransform m_Root;
 
         public bool DontDestroyAfterPop
         {
@@ -51,33 +44,35 @@ namespace UGUIPageNavigator.Runtime
             set => m_DontDestroyAfterPop = value;
         }
 
+        public bool EnableBackdrop
+        {
+            get => m_EnableBackdrop;
+            set => m_EnableBackdrop = value;
+        }
+
+        public string Path => m_Path;
+        public int SortingOrder => m_SortingOrder;
         public PageTransitionContainer TransitionContainer => m_TransitionContainer;
-        public bool EnableBackdrop => m_EnableBackdrop;
         public PageBackdrop OverrideBackdrop => m_OverrideBackdrop;
 
+        public RectTransform Root => m_Root;
+        public GameObject PageObject => m_PageObject;
 
-        public virtual void PageWillAppear()
+        internal void Config(string path, int? sortingOrder)
         {
+            m_Path = path;
+            if (sortingOrder.HasValue)
+            {
+                m_SortingOrder = sortingOrder.Value;
+            }
         }
 
-        public virtual void PageDidAppear()
+        internal void Load(GameObject underlyingCanvas, Camera canvasCamera)
         {
-        }
-
-        public virtual void PageWillDisAppear()
-        {
-        }
-
-        public virtual void PageDidDisAppear()
-        {
-        }
-
-        public virtual void PageEnterCache()
-        {
-        }
-
-        public virtual void PageExitCache()
-        {
+            CheckCanvas(underlyingCanvas, canvasCamera);
+            CheckRoot();
+            CheckSortingOrder();
+            PageDidLoad();
         }
 
         internal void EnterCache()
@@ -92,16 +87,116 @@ namespace UGUIPageNavigator.Runtime
             PageExitCache();
         }
 
-        private void UpdateSortingOrder()
+        private void CheckCanvas(GameObject underlyingCanvas, Camera canvasCamera)
         {
-            var canvas = GetComponent<Canvas>();
-            if (canvas == null)
+            var rootCanvas = gameObject.GetComponent<Canvas>();
+            if (rootCanvas != null)
             {
-                canvas = gameObject.AddComponent<Canvas>();
+                m_PageObject = gameObject;
+                CheckCamera(rootCanvas, canvasCamera);
+                return;
             }
 
+            rootCanvas = gameObject.GetComponentInParent<Canvas>();
+            if (rootCanvas != null)
+            {
+                m_PageObject = rootCanvas.gameObject;
+                CheckCamera(rootCanvas, canvasCamera);
+                return;
+            }
+
+            if (underlyingCanvas == null)
+            {
+                throw new Exception("Page must be under a canvas");
+            }
+
+            var pageObj = Instantiate(underlyingCanvas, transform.parent);
+            pageObj.name = gameObject.name;
+            m_PageObject = pageObj;
+
+            rootCanvas = pageObj.GetComponent<Canvas>();
+            CheckCamera(rootCanvas, canvasCamera);
+
+            transform.SetParent(pageObj.transform);
+            (transform as RectTransform).FillParent(pageObj.transform as RectTransform);
+            gameObject.name = RootName;
+        }
+
+        private void CheckRoot()
+        {
+            if (transform.name == RootName) return;
+
+            var root = transform.Find(RootName);
+            if (root == null)
+            {
+                var rootObj = new GameObject("Root");
+                var rootRect = rootObj.AddComponent<RectTransform>();
+                rootRect.SetParent(transform);
+                rootRect.FillParent(transform as RectTransform);
+                root = rootRect;
+
+                foreach (Transform child in transform)
+                {
+                    if (child == root) continue;
+                    child.SetParent(root);
+                }
+            }
+            else
+            {
+                (root as RectTransform).FillParent(transform as RectTransform);
+            }
+
+
+            m_Root = root as RectTransform;
+        }
+
+        private void CheckCamera(Canvas canvas, Camera canvasCamera)
+        {
+            if (canvasCamera == null) return;
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = canvasCamera;
+        }
+
+        private void CheckSortingOrder()
+        {
+            var canvas = m_PageObject.GetComponent<Canvas>();
             canvas.overrideSorting = true;
             canvas.sortingOrder = m_SortingOrder;
         }
+
+
+        private string RootName => "Root";
+
+        #region IPageLifecycleEvent
+
+        public virtual void PageDidLoad()
+        {
+        }
+
+        public virtual void PageWillAppear()
+        {
+        }
+
+        public virtual void PageDidAppear()
+        {
+        }
+
+        public virtual void PageWillDisappear()
+        {
+        }
+
+        public virtual void PageDidDisappear()
+        {
+        }
+
+        public virtual void PageEnterCache()
+        {
+        }
+
+        public virtual void PageExitCache()
+        {
+        }
+
+        #endregion
     }
 }
