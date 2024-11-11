@@ -38,6 +38,8 @@ namespace UGUIPageNavigator.Runtime
 
         private RectTransform m_Root;
 
+        internal bool IsInTransition = false;
+
         public bool DontDestroyAfterPop
         {
             get => m_DontDestroyAfterPop;

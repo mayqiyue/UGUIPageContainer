@@ -45,6 +45,8 @@ namespace UGUIPageNavigator.Runtime
 
         private readonly List<Page> m_DontDestroyPages = new List<Page>();
 
+        private readonly List<string> m_PushingPaths = new List<string>();
+
         public List<Page> Pages => m_Pages;
 
         private void Awake()
@@ -88,6 +90,9 @@ namespace UGUIPageNavigator.Runtime
 
         public async UniTask Push<T>(string path, bool animated = true, Action<T> onLoad = null) where T : Page
         {
+            if (m_PushingPaths.Contains(path)) return;
+            m_PushingPaths.Add(path);
+
             T page = null;
             var cachePage = m_DontDestroyPages.Find(p => p.Path == path) as T;
             if (cachePage != null)
@@ -103,6 +108,7 @@ namespace UGUIPageNavigator.Runtime
                 page = pageObj.GetComponent<T>();
                 if (page == null)
                 {
+                    m_PushingPaths.RemoveAll(x => x == path);
                     throw new Exception($"Page {path} must have a component of type {typeof(T).Name}");
                 }
 
@@ -159,6 +165,8 @@ namespace UGUIPageNavigator.Runtime
             {
                 t.Did(PageOperation.Push, m_Pages.Count >= 2 ? m_Pages[^2] : null, page);
             }
+
+            m_PushingPaths.RemoveAll(x => x == path);
         }
 
         #endregion
@@ -201,6 +209,9 @@ namespace UGUIPageNavigator.Runtime
 
         private async UniTask Pop(Page page, Page to, bool animated = true)
         {
+            if (page.IsInTransition) return;
+            page.IsInTransition = true;
+
             foreach (var t in m_eventListeners)
             {
                 t.Will(PageOperation.Pop, page, to);
@@ -228,6 +239,8 @@ namespace UGUIPageNavigator.Runtime
             {
                 t.Did(PageOperation.Pop, page, to);
             }
+
+            page.IsInTransition = false;
 
             if (page.DontDestroyAfterPop)
             {
