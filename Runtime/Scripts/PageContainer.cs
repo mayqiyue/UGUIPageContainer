@@ -115,6 +115,8 @@ namespace UGUIPageNavigator.Runtime
                 pageObj.name = pageObj.name.Replace("(Clone)", "");
             }
 
+            page.IsInTransition = true;
+
             int? sortingOrder = null;
             if (m_AutoSoringOrder)
             {
@@ -166,6 +168,7 @@ namespace UGUIPageNavigator.Runtime
                 t.Did(PageOperation.Push, m_Pages.Count >= 2 ? m_Pages[^2] : null, page);
             }
 
+            page.IsInTransition = false;
             m_PushingPaths.RemoveAll(x => x == path);
         }
 
@@ -183,11 +186,7 @@ namespace UGUIPageNavigator.Runtime
             if (count > m_Pages.Count) return;
 
             var pages = m_Pages.GetRange(m_Pages.Count - count, count);
-            m_Pages.RemoveRange(m_Pages.Count - count, count);
-
             var to = m_Pages.Count > 0 ? m_Pages[^1] : null;
-
-            pages.Reverse();
 
             await UniTask.WhenAll(pages.Select(page => Pop(page, to, animated))).SuppressCancellationThrow();
         }
@@ -241,6 +240,8 @@ namespace UGUIPageNavigator.Runtime
             }
 
             page.IsInTransition = false;
+            
+            m_Pages.Remove(page);
 
             if (page.DontDestroyAfterPop)
             {
