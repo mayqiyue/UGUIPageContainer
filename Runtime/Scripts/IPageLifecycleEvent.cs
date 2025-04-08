@@ -10,6 +10,9 @@ namespace UGUIPageNavigator.Runtime
 {
     public interface IPageLifecycleEvent
     {
+        /// <summary>
+        /// 
+        /// </summary>
         void PageDidLoad();
 
         /// <summary>

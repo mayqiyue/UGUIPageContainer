@@ -1,21 +1,22 @@
 {
-    "name": "com.mayqiyue.uguipagenavigator",
-    "displayName": "UGUIPageNavigator",
-    "author": {
-        "name": "mayqiyue",
-        "url": "https://github.com/mayqiyue"
-    },
-    "version": "0.0.1",
-    "unity": "2018.4",
-    "description": "Provides an efficient page navigation system for UGUI.",
-    "keywords": [
-        "page",
-        "screen",
-        "navigation"
-    ],
-    "license": "MIT",
-    "category": "UGUI",
-    "dependencies": {
-        "com.cysharp.unitask": ">=2.0.0"
-    }
+  "name": "com.mayqiyue.uguipagenavigator",
+  "displayName": "UGUIPageNavigator",
+  "author": {
+    "name": "mayqiyue",
+    "url": "https://github.com/mayqiyue"
+  },
+  "version": "0.0.2",
+  "unity": "2021.4",
+  "description": "Provides an efficient page navigation system for UGUI.",
+  "keywords": [
+    "page",
+    "screen",
+    "navigation"
+  ],
+  "license": "MIT",
+  "category": "UGUI",
+  "dependencies": {
+    "com.cysharp.unitask": ">=2.0.0",
+    "com.unity.addressables": ">=1.21.20"
+  }
 }

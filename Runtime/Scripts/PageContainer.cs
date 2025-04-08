@@ -41,6 +41,8 @@ namespace UGUIPageNavigator.Runtime
         [SerializeField]
         private int m_SortingOrderStep = 10;
 
+        private readonly PageAssetLoader m_PageAssetLoader = new PageAssetLoader();
+
         private readonly List<Page> m_Pages = new List<Page>();
 
         private readonly List<Page> m_DontDestroyPages = new List<Page>();
@@ -66,6 +68,7 @@ namespace UGUIPageNavigator.Runtime
 
         private void OnDestroy()
         {
+            m_PageAssetLoader.ReleaseAll();
             Instances.Remove(this);
         }
 
@@ -103,7 +106,7 @@ namespace UGUIPageNavigator.Runtime
             }
             else
             {
-                var prefab = Resources.Load<GameObject>(path);
+                var prefab = await m_PageAssetLoader.LoadAsync<GameObject>(path);
                 var pageObj = Instantiate(prefab, transform);
                 page = pageObj.GetComponent<T>();
                 if (page == null)
@@ -240,7 +243,7 @@ namespace UGUIPageNavigator.Runtime
             }
 
             page.IsInTransition = false;
-            
+
             m_Pages.Remove(page);
 
             if (page.DontDestroyAfterPop)
@@ -249,6 +252,7 @@ namespace UGUIPageNavigator.Runtime
             }
             else
             {
+                m_PageAssetLoader.Release(page.Path);
                 Destroy(page.PageObject);
             }
         }
