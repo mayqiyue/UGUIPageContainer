@@ -41,13 +41,13 @@ namespace UGUIPageNavigator.Runtime
         [SerializeField]
         private int m_SortingOrderStep = 10;
 
-        private readonly PageAssetLoader m_PageAssetLoader = new PageAssetLoader();
+        public IPageAssetLoader PageAssetLoader { get; set; } = new ResourcesPageAssetLoader();
 
         private readonly List<Page> m_Pages = new List<Page>();
 
         private readonly List<Page> m_DontDestroyPages = new List<Page>();
 
-        private readonly List<string> m_PushingPaths = new List<string>();
+        private readonly List<PageAssetInfo> m_PushingPaths = new List<PageAssetInfo>();
 
         public List<Page> Pages => m_Pages;
 
@@ -68,7 +68,7 @@ namespace UGUIPageNavigator.Runtime
 
         private void OnDestroy()
         {
-            m_PageAssetLoader.ReleaseAll();
+            PageAssetLoader.ReleaseAll();
             Instances.Remove(this);
         }
 
@@ -86,18 +86,18 @@ namespace UGUIPageNavigator.Runtime
 
         #region Push
 
-        public async UniTask Push(string path, bool animated = true, Action<Page> onLoad = null)
+        public async UniTask Push(PageAssetInfo info, bool animated = true, Action<Page> onLoad = null)
         {
-            await Push<Page>(path, animated, onLoad);
+            await Push<Page>(info, animated, onLoad);
         }
 
-        public async UniTask Push<T>(string path, bool animated = true, Action<T> onLoad = null) where T : Page
+        public async UniTask Push<T>(PageAssetInfo info, bool animated = true, Action<T> onLoad = null) where T : Page
         {
-            if (m_PushingPaths.Contains(path)) return;
-            m_PushingPaths.Add(path);
+            if (m_PushingPaths.Exists(x => x == info)) return;
+            m_PushingPaths.Add(info);
 
             T page = null;
-            var cachePage = m_DontDestroyPages.Find(p => p.Path == path) as T;
+            var cachePage = m_DontDestroyPages.Find(p => p.Path == info) as T;
             if (cachePage != null)
             {
                 page = cachePage;
@@ -106,13 +106,13 @@ namespace UGUIPageNavigator.Runtime
             }
             else
             {
-                var prefab = await m_PageAssetLoader.LoadAsync<GameObject>(path);
+                var prefab = await PageAssetLoader.LoadAsync<GameObject>(info);
                 var pageObj = Instantiate(prefab, transform);
                 page = pageObj.GetComponent<T>();
                 if (page == null)
                 {
-                    m_PushingPaths.RemoveAll(x => x == path);
-                    throw new Exception($"Page {path} must have a component of type {typeof(T).Name}");
+                    m_PushingPaths.RemoveAll(x => x == info);
+                    throw new Exception($"Page {info} must have a component of type {typeof(T).Name}");
                 }
 
                 pageObj.name = pageObj.name.Replace("(Clone)", "");
@@ -126,7 +126,7 @@ namespace UGUIPageNavigator.Runtime
                 sortingOrder = m_Pages.Count > 0 ? (TopPage.SortingOrder + m_SortingOrderStep) : m_BaseSortingOrder;
             }
 
-            page.Config(path, sortingOrder);
+            page.Config(info, sortingOrder);
             page.Load(m_UnderlyingCanvas, m_CanvasCamera);
             onLoad?.Invoke(page);
 
@@ -172,7 +172,7 @@ namespace UGUIPageNavigator.Runtime
             }
 
             page.IsInTransition = false;
-            m_PushingPaths.RemoveAll(x => x == path);
+            m_PushingPaths.RemoveAll(x => x == info);
         }
 
         #endregion
@@ -194,7 +194,7 @@ namespace UGUIPageNavigator.Runtime
             await UniTask.WhenAll(pages.Select(page => Pop(page, to, animated))).SuppressCancellationThrow();
         }
 
-        public async UniTask PopTo(string path, bool animated = true)
+        public async UniTask PopTo(PageAssetInfo path, bool animated = true)
         {
             var index = m_Pages.FindIndex(page => page.Path == path);
             if (index == -1) return;
@@ -252,7 +252,7 @@ namespace UGUIPageNavigator.Runtime
             }
             else
             {
-                m_PageAssetLoader.Release(page.Path);
+                PageAssetLoader.Release(page.Path);
                 Destroy(page.PageObject);
             }
         }

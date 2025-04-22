@@ -17,7 +17,7 @@ namespace UGUIPageNavigator.Runtime
     [DisallowMultipleComponent]
     public class Page : MonoBehaviour, IPageLifecycleEvent
     {
-        private string m_Path;
+        private PageAssetInfo m_Path;
 
         private int m_SortingOrder;
 
@@ -51,7 +51,7 @@ namespace UGUIPageNavigator.Runtime
             set => m_EnableBackdrop = value;
         }
 
-        public string Path => m_Path;
+        public PageAssetInfo Path => m_Path;
         public int SortingOrder => m_SortingOrder;
         public PageTransitionContainer TransitionContainer => m_TransitionContainer;
         public PageBackdrop OverrideBackdrop => m_OverrideBackdrop;
@@ -59,7 +59,7 @@ namespace UGUIPageNavigator.Runtime
         public RectTransform Root => m_Root;
         public GameObject PageObject => m_PageObject;
 
-        internal void Config(string path, int? sortingOrder)
+        internal void Config(PageAssetInfo path, int? sortingOrder)
         {
             m_Path = path;
             if (sortingOrder.HasValue)

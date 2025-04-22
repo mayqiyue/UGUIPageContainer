@@ -5,7 +5,7 @@
     "name": "mayqiyue",
     "url": "https://github.com/mayqiyue"
   },
-  "version": "0.0.2",
+  "version": "0.0.3",
   "unity": "2021.4",
   "description": "Provides an efficient page navigation system for UGUI.",
   "keywords": [
@@ -16,7 +16,6 @@
   "license": "MIT",
   "category": "UGUI",
   "dependencies": {
-    "com.cysharp.unitask": ">=2.0.0",
-    "com.unity.addressables": ">=1.21.20"
+    "com.cysharp.unitask": ">=2.0.0"
   }
 }
