@@ -58,6 +58,7 @@ namespace UGUIPageNavigator.Runtime
         {
             m_ParentTransform = parentTransform;
             m_RectTransform.FillParent(m_ParentTransform);
+            m_RectTransform.localEulerAngles = Vector3.zero;
             m_CanvasGroup.interactable = m_closeWhenClicked;
             gameObject.SetActive(false);
         }

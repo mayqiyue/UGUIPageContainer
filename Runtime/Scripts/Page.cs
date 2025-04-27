@@ -119,7 +119,8 @@ namespace UGUIPageNavigator.Runtime
             CheckCamera(rootCanvas, canvasCamera);
 
             transform.SetParent(pageObj.transform);
-            (transform as RectTransform).FillParent(pageObj.transform as RectTransform);
+            ((RectTransform)transform).FillParent(pageObj.transform as RectTransform);
+            ((RectTransform)transform).localEulerAngles = Vector3.zero;
             gameObject.name = RootName;
         }
 
@@ -134,17 +135,20 @@ namespace UGUIPageNavigator.Runtime
                 var rootRect = rootObj.AddComponent<RectTransform>();
                 rootRect.SetParent(transform);
                 rootRect.FillParent(transform as RectTransform);
+                rootRect.localEulerAngles = Vector3.zero;
                 root = rootRect;
 
                 foreach (Transform child in transform)
                 {
                     if (child == root) continue;
                     child.SetParent(root);
+                    ((RectTransform)child).localEulerAngles = Vector3.zero;
                 }
             }
             else
             {
-                (root as RectTransform).FillParent(transform as RectTransform);
+                ((RectTransform)root).FillParent(transform as RectTransform);
+                ((RectTransform)root).localEulerAngles = Vector3.zero;
             }
 
 
