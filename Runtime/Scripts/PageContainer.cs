@@ -51,6 +51,12 @@ namespace UGUIPageNavigator.Runtime
 
         public List<Page> Pages => m_Pages;
 
+        public void UpdateCanvasCamera(Camera camera)
+        {
+            m_CanvasCamera = camera;
+            m_Pages.ForEach(page => page.UpdateCanvasCamera(camera));
+        }
+
         private void Awake()
         {
             if (m_TransitionContainer.EnterAnimation == null)

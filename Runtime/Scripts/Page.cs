@@ -37,6 +37,8 @@ namespace UGUIPageNavigator.Runtime
 
         private RectTransform m_Root;
 
+        private Canvas m_PageCanvas;
+
         internal bool IsInTransition = false;
 
         public bool DontDestroyAfterPop
@@ -76,6 +78,12 @@ namespace UGUIPageNavigator.Runtime
             PageDidLoad();
         }
 
+        internal void UpdateCanvasCamera(Camera camera)
+        {
+            if (m_PageCanvas == null) return;
+            CheckCamera(m_PageCanvas, camera);
+        }
+
         internal void EnterCache()
         {
             gameObject.SetActive(false);
@@ -94,6 +102,7 @@ namespace UGUIPageNavigator.Runtime
             if (rootCanvas != null)
             {
                 m_PageObject = gameObject;
+                m_PageCanvas = rootCanvas;
                 CheckCamera(rootCanvas, canvasCamera);
                 return;
             }
@@ -102,6 +111,7 @@ namespace UGUIPageNavigator.Runtime
             if (rootCanvas != null)
             {
                 m_PageObject = rootCanvas.gameObject;
+                m_PageCanvas = rootCanvas;
                 CheckCamera(rootCanvas, canvasCamera);
                 return;
             }
@@ -116,6 +126,7 @@ namespace UGUIPageNavigator.Runtime
             m_PageObject = pageObj;
 
             rootCanvas = pageObj.GetComponent<Canvas>();
+            m_PageCanvas = rootCanvas;
             CheckCamera(rootCanvas, canvasCamera);
 
             transform.SetParent(pageObj.transform);
