@@ -60,6 +60,7 @@ namespace UGUIPageNavigator.Runtime
 
         public RectTransform Root => m_Root;
         public GameObject PageObject => m_PageObject;
+        public Canvas PageCanvas => m_PageCanvas;
 
         internal void Config(PageAssetInfo path, int? sortingOrder)
         {
