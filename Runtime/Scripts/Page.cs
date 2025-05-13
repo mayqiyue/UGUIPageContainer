@@ -53,10 +53,15 @@ namespace UGUIPageNavigator.Runtime
             set => m_EnableBackdrop = value;
         }
 
+        public PageBackdrop OverrideBackdrop
+        {
+            get => m_OverrideBackdrop;
+            set => m_OverrideBackdrop = value;
+        }
+
         public PageAssetInfo Path => m_Path;
         public int SortingOrder => m_SortingOrder;
         public PageTransitionContainer TransitionContainer => m_TransitionContainer;
-        public PageBackdrop OverrideBackdrop => m_OverrideBackdrop;
 
         public RectTransform Root => m_Root;
         public GameObject PageObject => m_PageObject;
